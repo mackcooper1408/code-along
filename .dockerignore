@@ -1,0 +1,24 @@
+# Node modules
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Next.js
+.next
+out
+
+# Testing
+coverage
+
+# Misc
+.DS_Store
+*.log
+.env*
+
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+!docker/*.md

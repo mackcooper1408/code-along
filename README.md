@@ -12,7 +12,7 @@ This is the Minimum Viable Product (MVP) focusing on the core user experience fo
 - **UI Components**: shadcn/ui for pre-built components
 - **Code Editor**: Monaco Editor (@monaco-editor/react)
 - **Backend**: Next.js API Routes (Node.js)
-- **Code Execution**: Placeholder API endpoint (Docker implementation planned for future)
+- **Code Execution**: Docker-based secure sandboxed execution with resource limits
 
 ## Features
 
@@ -36,14 +36,18 @@ This is the Minimum Viable Product (MVP) focusing on the core user experience fo
    - Displays test results with color-coded feedback
    - Shows success (green) or failure (red/orange) messages
 
-### Mock Code Execution
+### Docker-Based Code Execution
 
-The `/api/run-code` endpoint simulates code execution:
+The `/api/run-code` endpoint executes user code securely in Docker containers:
 
 - Accepts POST requests with `{ "code": "USER_CODE_STRING" }`
-- Simulates 1.5-second execution delay
-- Returns success if code includes the word "bind"
-- Provides helpful hints on failure
+- Executes code in isolated Docker container
+- Runs automated tests against user code
+- Enforces resource limits (CPU, memory, time)
+- Network-isolated for security
+- Returns detailed test results and feedback
+
+See [docker/README.md](docker/README.md) for detailed security and architecture information.
 
 ## Project Structure
 
@@ -76,11 +80,25 @@ code-along/
 
 ### Installation
 
-Dependencies are already installed. If you need to reinstall:
+1. Install Node.js dependencies:
 
 ```bash
 npm install
 ```
+
+2. **Set up Docker for code execution** (required):
+
+```bash
+./scripts/setup-docker.sh
+```
+
+This will:
+
+- Check if Docker is installed and running
+- Build the code execution Docker image
+- Verify the setup
+
+**Important**: Docker Desktop must be installed and running. Download from [docker.com](https://www.docker.com/products/docker-desktop)
 
 ### Running the Application
 

@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getDockerExecutor } from '@/lib/docker-executor';
 
 interface RunCodeRequest {
   code: string;
+  mode?: 'execute' | 'test';
 }
 
 interface RunCodeResponse {
   success: boolean;
   message: string;
   output: string;
+  executionTime?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -26,33 +29,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Simulate execution delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const executor = getDockerExecutor();
 
-    // Mock logic: Check if code includes 'bind'
-    const includesBind = code.includes('bind');
+    // Run tests against the user's code
+    const result = await executor.runTests(code);
 
-    const response: RunCodeResponse = includesBind
-      ? {
-          success: true,
-          message: 'Step 1 Passed! Your server started correctly.',
-          output:
-            'Running tests...\n- Test: Server binds to port 6379... PASSED\n- Test: Server accepts a connection... PASSED',
-        }
-      : {
-          success: false,
-          message: 'Not quite. One test failed.',
-          output:
-            'Running tests...\n- Test: Server binds to port 6379... FAILED\n\nHint: Have you used the `socket.bind()` method to attach your server to an address?',
-        };
+    // Parse the output to create a user-friendly message
+    const output = result.output || 'Test execution completed';
+    const success = result.success && output.includes('PASSED');
+
+    const message = success
+      ? '✓ Step 1 Passed! Your server started correctly.'
+      : '✗ Not quite. One or more tests failed.';
+
+    const response: RunCodeResponse = {
+      success,
+      message,
+      output,
+      executionTime: result.executionTime,
+    };
+
+    console.log('Code execution response:', response);
 
     return NextResponse.json(response);
   } catch (error) {
+    console.error('Code execution error:', error);
+
     return NextResponse.json(
       {
         success: false,
         message: 'Internal server error',
-        output: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        output: `Error: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }\n\nPlease make sure Docker is running and try again.`,
       },
       { status: 500 }
     );
