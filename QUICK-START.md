@@ -143,10 +143,36 @@ curl -I http://localhost:3000
 
 ## What's Next?
 
+### For Testing Right Now:
+
 1. Open http://localhost:3000
 2. Try the default code (should fail)
 3. Add `socket.bind()` and `socket.listen()`
 4. Run tests again (should pass!)
+
+### For Development:
+
+See **`NEXT-STEPS.md`** for the complete roadmap!
+
+**Top Priority:** Implement multi-step progression (Steps 2-5) to complete the Redis learning journey.
+
+---
+
+## 📊 Current Status
+
+✅ **Completed:**
+
+- Three-panel workspace UI ✓
+- Monaco Editor integration ✓
+- Docker secure execution ✓
+- Step 1: TCP server ✓
+- Real-time feedback ✓
+
+🚧 **Next Phase:**
+
+- Multiple steps (2-5)
+- Step navigation
+- Progress tracking
 
 ---
 
