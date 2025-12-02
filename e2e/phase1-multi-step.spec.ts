@@ -41,7 +41,7 @@ test.describe('Phase 1: Multi-Step Learning Journey', () => {
 
   test('should navigate to Step 2 using Next button', async ({ page }) => {
     // Click Next button
-    await page.getByRole('button', { name: /Next/i }).click();
+    await page.getByRole('button', { name: 'Next →' }).click();
 
     // Wait for content to change
     await page.waitForTimeout(500);
@@ -69,13 +69,13 @@ test.describe('Phase 1: Multi-Step Learning Journey', () => {
       await expect(page.getByText(`Step ${i + 1} of 5`)).toBeVisible();
 
       if (i < steps.length - 1) {
-        await page.getByRole('button', { name: /Next/i }).click();
+        await page.getByRole('button', { name: 'Next →' }).click();
         await page.waitForTimeout(300);
       }
     }
 
     // On Step 5, Next button should be disabled
-    await expect(page.getByRole('button', { name: /Next/i })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Next →' })).toBeDisabled();
 
     // Navigate backward
     for (let i = steps.length - 1; i > 0; i--) {
@@ -91,10 +91,11 @@ test.describe('Phase 1: Multi-Step Learning Journey', () => {
     await expect(editor).toBeVisible();
 
     // Step 1 should have basic socket code
-    await expect(page.locator('.view-line')).toContainText('import socket', { timeout: 5000 });
+    const editorContent = page.locator('.monaco-editor');
+    await expect(editorContent).toContainText('import socket', { timeout: 5000 });
 
     // Navigate to Step 2
-    await page.getByRole('button', { name: /Next/i }).click();
+    await page.getByRole('button', { name: 'Next →' }).click();
     await page.waitForTimeout(500);
 
     // Step 2 should have different boilerplate (includes accept and recv)
@@ -102,7 +103,7 @@ test.describe('Phase 1: Multi-Step Learning Journey', () => {
 
     // Navigate to Step 5
     for (let i = 0; i < 3; i++) {
-      await page.getByRole('button', { name: /Next/i }).click();
+      await page.getByRole('button', { name: 'Next →' }).click();
       await page.waitForTimeout(300);
     }
 
@@ -125,7 +126,7 @@ test.describe('Phase 1: Multi-Step Learning Journey', () => {
     await expect(page.getByText(/~\d+ min/)).toBeVisible();
 
     // Navigate to Step 2 and check it also has estimated time
-    await page.getByRole('button', { name: /Next/i }).click();
+    await page.getByRole('button', { name: 'Next →' }).click();
     await page.waitForTimeout(300);
     await expect(page.getByText(/~\d+ min/)).toBeVisible();
   });
@@ -137,14 +138,14 @@ test.describe('Phase 1: Multi-Step Learning Journey', () => {
       await expect(runButton).toBeEnabled();
 
       if (i < 4) {
-        await page.getByRole('button', { name: /Next/i }).click();
+        await page.getByRole('button', { name: 'Next →' }).click();
         await page.waitForTimeout(300);
       }
     }
   });
 
   test('should display file navigator showing main.py', async ({ page }) => {
-    await expect(page.getByText('main.py')).toBeVisible();
+    await expect(page.getByText('main.py', { exact: true })).toBeVisible();
   });
 
   test('should show initial terminal message', async ({ page }) => {
@@ -153,9 +154,9 @@ test.describe('Phase 1: Multi-Step Learning Journey', () => {
 
   test('should maintain step progress across navigation', async ({ page }) => {
     // Navigate to Step 3
-    await page.getByRole('button', { name: /Next/i }).click();
+    await page.getByRole('button', { name: 'Next →' }).click();
     await page.waitForTimeout(300);
-    await page.getByRole('button', { name: /Next/i }).click();
+    await page.getByRole('button', { name: 'Next →' }).click();
     await page.waitForTimeout(300);
 
     // Verify we're on Step 3
@@ -171,9 +172,9 @@ test.describe('Phase 1: Multi-Step Learning Journey', () => {
     await expect(page.getByText('Step 1: Listening for Connections')).toBeVisible();
 
     // Navigate forward to Step 3 again
-    await page.getByRole('button', { name: /Next/i }).click();
+    await page.getByRole('button', { name: 'Next →' }).click();
     await page.waitForTimeout(300);
-    await page.getByRole('button', { name: /Next/i }).click();
+    await page.getByRole('button', { name: 'Next →' }).click();
     await page.waitForTimeout(300);
 
     // Should still be on Step 3

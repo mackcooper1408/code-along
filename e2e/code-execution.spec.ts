@@ -58,7 +58,7 @@ test.describe('Code Execution and Testing', () => {
 
     // Navigation buttons should be disabled while running
     const prevButton = page.getByRole('button', { name: '← Previous' });
-    const nextButton = page.getByRole('button', { name: /Next/i });
+    const nextButton = page.getByRole('button', { name: 'Next →' });
 
     await expect(prevButton).toBeDisabled();
     // Next button starts disabled on Step 1, but Run Tests button should be disabled
@@ -76,7 +76,7 @@ test.describe('Code Execution and Testing', () => {
     const step1Output = await terminal.textContent();
 
     // Navigate to Step 2
-    await page.getByRole('button', { name: /Next/i }).click();
+    await page.getByRole('button', { name: 'Next →' }).click();
     await page.waitForTimeout(300);
 
     // Terminal should reset to initial message
@@ -96,7 +96,7 @@ test.describe('Code Execution and Testing', () => {
     await page.waitForTimeout(8000);
 
     // Navigate to Step 2
-    await page.getByRole('button', { name: /Next/i }).click();
+    await page.getByRole('button', { name: 'Next →' }).click();
     await page.waitForTimeout(500);
 
     // Run tests button should be available and enabled

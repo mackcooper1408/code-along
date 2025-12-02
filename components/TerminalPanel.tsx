@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 
 interface TerminalPanelProps {
@@ -29,6 +29,12 @@ export default function TerminalPanel({
   const [output, setOutput] = useState<string>("Click 'Run Tests' to check your work...");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
+
+  // Reset terminal output when step changes
+  useEffect(() => {
+    setOutput("Click 'Run Tests' to check your work...");
+    setTestResult(null);
+  }, [currentStepId]);
 
   const handleRunTests = async () => {
     setIsLoading(true);
