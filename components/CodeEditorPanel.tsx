@@ -1,23 +1,24 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
+import { Step } from '@/lib/steps-data';
 
 interface CodeEditorPanelProps {
+  step: Step;
   onCodeChange?: (code: string) => void;
 }
 
-const defaultCode = `# main.py
-import socket
+export default function CodeEditorPanel({ step, onCodeChange }: CodeEditorPanelProps) {
+  const [code, setCode] = useState<string>(step.initialCode);
 
-def main():
-    print("Logs from your program will appear here.")
-
-if __name__ == "__main__":
-    main()`;
-
-export default function CodeEditorPanel({ onCodeChange }: CodeEditorPanelProps) {
-  const [code, setCode] = useState<string>(defaultCode);
+  // Update code when step changes
+  useEffect(() => {
+    setCode(step.initialCode);
+    if (onCodeChange) {
+      onCodeChange(step.initialCode);
+    }
+  }, [step.id, step.initialCode, onCodeChange]);
 
   const handleEditorChange = (value: string | undefined) => {
     const newCode = value || '';

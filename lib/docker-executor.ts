@@ -152,11 +152,11 @@ export class DockerExecutor {
   /**
    * Run tests against user code
    */
-  async runTests(code: string): Promise<ExecutionResult> {
+  async runTests(code: string, stepId: number = 1): Promise<ExecutionResult> {
     const startTime = Date.now();
     const runId = randomBytes(8).toString('hex');
     const codeFile = join(this.tempDir, `main_${runId}.py`);
-    const testFile = join(process.cwd(), 'docker', 'test_step1.py');
+    const testFile = join(process.cwd(), 'docker', `test_step${stepId}.py`);
 
     try {
       await this.buildImage();

@@ -4,6 +4,7 @@ import { getDockerExecutor } from '@/lib/docker-executor';
 interface RunCodeRequest {
   code: string;
   mode?: 'execute' | 'test';
+  stepId?: number;
 }
 
 interface RunCodeResponse {
@@ -16,7 +17,7 @@ interface RunCodeResponse {
 export async function POST(request: NextRequest) {
   try {
     const body: RunCodeRequest = await request.json();
-    const { code } = body;
+    const { code, stepId = 1 } = body;
 
     if (!code) {
       return NextResponse.json(
@@ -31,15 +32,15 @@ export async function POST(request: NextRequest) {
 
     const executor = getDockerExecutor();
 
-    // Run tests against the user's code
-    const result = await executor.runTests(code);
+    // Run tests against the user's code for the specified step
+    const result = await executor.runTests(code, stepId);
 
     // Parse the output to create a user-friendly message
     const output = result.output || 'Test execution completed';
     const success = result.success && output.includes('PASSED');
 
     const message = success
-      ? '✓ Step 1 Passed! Your server started correctly.'
+      ? `✓ Step ${stepId} Passed! Great work!`
       : '✗ Not quite. One or more tests failed.';
 
     const response: RunCodeResponse = {
