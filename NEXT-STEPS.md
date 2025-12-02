@@ -1,122 +1,170 @@
-# Next Steps - Roadmap to Enhanced MVP
+# Next Steps - Phase 2+ Roadmap
 
 ## 🎯 Current Status
 
-✅ **Completed Core MVP:**
+✅ **Phase 1 Complete:**
 
 - Three-panel workspace UI
 - Monaco Editor with Python syntax
 - Docker-based secure code execution
-- Step 1: TCP server validation
+- **5-step learning journey** (Steps 1-5 all implemented)
+- Step navigation with Previous/Next buttons
+- Visual progress tracking (0/5 steps completed)
+- Dynamic step content and boilerplate code
+- Step-specific test suites (docker/test_step*.py)
 - Real-time test feedback
+- Terminal output reset on navigation
 - Security constraints
+- **29 passing Playwright E2E tests**
 
 ## 🚀 Recommended Next Steps (Priority Order)
 
-### Phase 1: Multi-Step Learning Journey (HIGH PRIORITY)
+### Phase 2: Progress Persistence (HIGH PRIORITY)
 
-**Goal:** Enable users to progress through multiple steps in the Redis project
-
-#### 1.1 Create Step Data Structure
-
-```typescript
-// types/steps.ts
-interface Step {
-  id: number;
-  title: string;
-  description: string;
-  instructions: string;
-  initialCode: string;
-  testFile: string;
-  hints: string[];
-}
-```
-
-#### 1.2 Implement Steps 2-5
-
-- **Step 2:** Handle PING command
-- **Step 3:** Handle ECHO command
-- **Step 4:** Handle SET command
-- **Step 5:** Handle GET command
-
-#### 1.3 Add Step Navigation
-
-- Next/Previous buttons
-- Progress indicator
-- Step completion state
-
-**Files to Create/Modify:**
-
-- `lib/steps-data.ts` - Step definitions
-- `docker/test_step2.py` through `test_step5.py`
-- `components/StepNavigator.tsx`
-- `app/page.tsx` - Add step state management
-
-**Estimated Time:** 2-3 days
-
----
-
-### Phase 2: Progress Persistence (MEDIUM PRIORITY)
-
-**Goal:** Save user progress so they can continue later
+**Goal:** Save user progress so they can continue their learning journey across sessions
 
 #### 2.1 Local Storage Implementation
 
-- Save current step
-- Save user code for each step
-- Load on return
+**Tasks:**
+1. Save current step number
+2. Save user code for each step (5 separate keys)
+3. Track completed steps
+4. Auto-save on code changes (debounced)
+5. Restore state on page load
 
-#### 2.2 Browser Storage Strategy
+**Files to Create/Modify:**
 
 ```typescript
 // lib/storage.ts
-interface UserProgress {
-  currentStep: number;
+export interface UserProgress {
+  currentStepId: number;
   completedSteps: number[];
   codeByStep: Record<number, string>;
   lastUpdated: string;
 }
+
+export const saveProgress = (progress: UserProgress) => {
+  localStorage.setItem('codealong-progress', JSON.stringify(progress));
+};
+
+export const loadProgress = (): UserProgress | null => {
+  const stored = localStorage.getItem('codealong-progress');
+  return stored ? JSON.parse(stored) : null;
+};
+
+export const clearProgress = () => {
+  localStorage.removeItem('codealong-progress');
+};
 ```
 
-**Files to Create:**
+```typescript
+// hooks/useProgress.ts
+export function useProgress() {
+  const [progress, setProgress] = useState<UserProgress | null>(null);
 
-- `lib/storage.ts` - LocalStorage wrapper
-- `hooks/useProgress.ts` - Progress state management
+  useEffect(() => {
+    // Load on mount
+    const saved = loadProgress();
+    if (saved) {
+      setProgress(saved);
+    }
+  }, []);
 
-**Estimated Time:** 1 day
+  const saveCurrentProgress = useCallback((newProgress: UserProgress) => {
+    setProgress(newProgress);
+    saveProgress(newProgress);
+  }, []);
+
+  return { progress, saveCurrentProgress, clearProgress };
+}
+```
+
+**Update `app/page.tsx`:**
+- Use `useProgress` hook
+- Load saved progress on mount
+- Save progress on step change
+- Save code changes (debounced)
+- Add "Reset Progress" button
+
+**Estimated Time:** 1-2 days
 
 ---
 
 ### Phase 3: Enhanced Test Feedback (MEDIUM PRIORITY)
 
-**Goal:** Provide better error messages and debugging info
+**Goal:** Provide visual, structured test results instead of plain text output
 
 #### 3.1 Structured Test Results
 
+**Current (text):**
+```
+Running tests...
+- Test: Server binds to port 6379... PASSED
+- Test: Server accepts a connection... PASSED
+```
+
+**New (structured JSON):**
 ```typescript
 interface TestResult {
+  stepId: number;
   passed: boolean;
-  name: string;
-  error?: string;
-  hint?: string;
-  output?: string;
+  tests: Array<{
+    name: string;
+    passed: boolean;
+    error?: string;
+    hint?: string;
+    lineNumber?: number;
+  }>;
+  totalTests: number;
+  passedTests: number;
+  executionTime: number;
 }
 ```
 
-#### 3.2 Visual Test Breakdown
+**Tasks:**
 
-- Show individual test results
-- Color-coded pass/fail indicators
-- Expandable error details
-- Line numbers for errors
+1. Update all `docker/test_step*.py` files to return JSON
+2. Parse JSON in `lib/docker-executor.ts`
+3. Create `components/TestResultsDisplay.tsx` component
+4. Show expandable test results with:
+   - Green checkmarks for passed tests
+   - Red X for failed tests
+   - Clickable error details
+   - Inline hints
+   - Line number references
 
 **Files to Modify:**
 
-- `docker/test_*.py` - Return structured JSON
-- `lib/docker-executor.ts` - Parse test results
-- `components/TerminalPanel.tsx` - Display structured results
+- `docker/test_step1.py` through `test_step5.py` - Return JSON
+- `lib/docker-executor.ts` - Parse JSON results
+- `components/TerminalPanel.tsx` - Use TestResultsDisplay component
+- Create `components/TestResultsDisplay.tsx`
 
-**Estimated Time:** 2 days
+**Example Python test output:**
+```python
+import json
+
+results = {
+    "passed": True,
+    "tests": [
+        {
+            "name": "Server binds to port 6379",
+            "passed": True
+        },
+        {
+            "name": "Server accepts connection",
+            "passed": True
+        }
+    ],
+    "totalTests": 2,
+    "passedTests": 2,
+    "executionTime": 1.2
+}
+
+print(json.dumps(results))
+```
+
+**Estimated Time:** 2-3 days
 
 ---
 
@@ -126,20 +174,38 @@ interface TestResult {
 
 #### 4.1 Three-Tier Hint System
 
-- Level 1: Gentle nudge
-- Level 2: More specific guidance
-- Level 3: Code example (not full solution)
+**Structure:**
+```typescript
+hints: [
+  {
+    level: 1,
+    text: "Think about what Python method is used to bind a socket to an address"
+  },
+  {
+    level: 2,
+    text: "You need to call socket.bind() with a tuple of (host, port)"
+  },
+  {
+    level: 3,
+    text: "Example: server_socket.bind(('localhost', 6379))",
+    code: true
+  }
+]
+```
 
-#### 4.2 UI Implementation
+**UI Implementation:**
 
-- "Need Help?" button
-- Progressive hint revelation
-- Track hints used
+- "Need Help?" button in Terminal panel
+- Shows hints progressively (must reveal Level 1 before Level 2)
+- Track hints used per step
+- Visual indicator showing hint level used
+- Hints collapse when tests pass
 
 **Files to Create:**
 
-- `components/HintPanel.tsx`
-- Update step data with hints
+- `components/HintPanel.tsx` - Collapsible hint display
+- Update `lib/steps-data.ts` - Convert hint strings to hint objects
+- Update `components/TerminalPanel.tsx` - Add hint UI
 
 **Estimated Time:** 1-2 days
 
@@ -147,215 +213,250 @@ interface TestResult {
 
 ### Phase 5: Better User Experience (ONGOING)
 
-#### 5.1 Loading States
+#### 5.1 Loading States & Feedback
 
-- Show Docker container startup
-- Progress indicators
-- Estimated time remaining
+**Tasks:**
+- Show Docker container status ("Spinning up container...", "Running tests...", "Cleaning up...")
+- Add progress indicator with estimated time
+- Show execution time for completed tests
+- Add "Reset Code" button per step
+- Add "Download Code" button
+- Show total time spent on project
 
-#### 5.2 Error Handling
+#### 5.2 Keyboard Shortcuts
 
-- Better error messages
-- Docker troubleshooting guide
-- Automatic retry on transient failures
+- `Cmd/Ctrl + Enter` - Run tests
+- `Cmd/Ctrl + [` - Previous step
+- `Cmd/Ctrl + ]` - Next step
+- `Cmd/Ctrl + R` - Reset code
+- `?` - Show keyboard shortcuts
 
 #### 5.3 Responsive Design Improvements
 
-- Mobile-friendly layout
-- Collapsible panels
-- Keyboard shortcuts
+- Mobile-friendly collapsible panels
+- Touch-friendly buttons
+- Optimized layout for tablets
+- Breakpoint refinements
+
+#### 5.4 Accessibility
+
+- ARIA labels for all interactive elements
+- Keyboard navigation throughout
+- Screen reader support
+- High contrast mode
+- Focus indicators
 
 **Estimated Time:** 2-3 days
 
 ---
 
-## 📋 Detailed Implementation Guide for Phase 1
+## 📋 Detailed Implementation Guide for Phase 2
 
-### Step 1: Create Steps Data Structure
+### Step-by-Step: LocalStorage Progress Persistence
 
-Create `lib/steps-data.ts`:
+**Step 1: Create Storage Utility**
+
+Create `lib/storage.ts`:
 
 ```typescript
-export interface Step {
-  id: number;
-  title: string;
-  description: string;
-  instructions: string;
-  initialCode: string;
-  testFile: string;
-  hints: string[];
+const STORAGE_KEY = 'codealong-progress';
+
+export interface UserProgress {
+  currentStepId: number;
+  completedSteps: number[];
+  codeByStep: Record<number, string>;
+  lastUpdated: string;
 }
 
-export const STEPS: Step[] = [
-  {
-    id: 1,
-    title: 'Listening for Connections',
-    description: 'Create a TCP server that binds to port 6379',
-    instructions: "Let's start by creating a simple TCP server...",
-    initialCode: `# main.py
-import socket
+export const saveProgress = (progress: UserProgress): void => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+  } catch (error) {
+    console.error('Failed to save progress:', error);
+  }
+};
 
-def main():
-    print("Logs from your program will appear here.")
+export const loadProgress = (): UserProgress | null => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch (error) {
+    console.error('Failed to load progress:', error);
+    return null;
+  }
+};
 
-if __name__ == "__main__":
-    main()`,
-    testFile: 'test_step1.py',
-    hints: [
-      'You need to create a socket using socket.socket()',
-      'Use the bind() method to attach to port 6379',
-      "Don't forget to call listen() to accept connections",
-    ],
-  },
-  {
-    id: 2,
-    title: 'Handle PING Command',
-    description: 'Accept client connections and respond to PING',
-    instructions: "Now let's accept a client and handle the PING command...",
-    initialCode: `# main.py
-import socket
+export const clearProgress = (): void => {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.error('Failed to clear progress:', error);
+  }
+};
 
-def main():
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(('localhost', 6379))
-    server.listen(1)
-    
-    # TODO: Accept connection and handle PING
-
-if __name__ == "__main__":
-    main()`,
-    testFile: 'test_step2.py',
-    hints: [
-      'Use server.accept() to get a client connection',
-      'Read the command with connection.recv()',
-      "Send back '+PONG\\r\\n' for PING commands",
-    ],
-  },
-  // Add more steps...
-];
+export const getDefaultProgress = (): UserProgress => ({
+  currentStepId: 1,
+  completedSteps: [],
+  codeByStep: {},
+  lastUpdated: new Date().toISOString(),
+});
 ```
 
-### Step 2: Create Test for Step 2
+**Step 2: Create Progress Hook**
 
-Create `docker/test_step2.py`:
-
-```python
-"""
-Test suite for Step 2: Handle PING Command
-"""
-import socket
-import sys
-import time
-import subprocess
-import os
-import signal
-
-def test_ping_command():
-    print("Running tests...\\n")
-
-    # Start the user's server in the background
-    proc = subprocess.Popen(
-        ['python', '/app/main.py'],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-
-    time.sleep(1)  # Give server time to start
-
-    try:
-        print("- Test: Server accepts connection...", end=" ")
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect(('localhost', 6379))
-        print("PASSED")
-
-        print("- Test: Server responds to PING...", end=" ")
-        client.send(b"*1\\r\\n$4\\r\\nPING\\r\\n")
-        response = client.recv(1024).decode()
-
-        if response == "+PONG\\r\\n":
-            print("PASSED")
-            return True
-        else:
-            print("FAILED")
-            print(f"\\nExpected: +PONG\\r\\n")
-            print(f"Got: {repr(response)}")
-            return False
-
-    except Exception as e:
-        print("FAILED")
-        print(f"\\nError: {e}")
-        return False
-    finally:
-        proc.kill()
-        client.close()
-
-if __name__ == "__main__":
-    success = test_ping_command()
-    sys.exit(0 if success else 1)
-```
-
-### Step 3: Update Page Component
-
-Modify `app/page.tsx` to support multiple steps:
+Create `hooks/useProgress.ts`:
 
 ```typescript
 'use client';
 
-import React, { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { UserProgress, loadProgress, saveProgress, getDefaultProgress } from '@/lib/storage';
+
+export function useProgress() {
+  const [progress, setProgress] = useState<UserProgress>(getDefaultProgress());
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load progress on mount
+  useEffect(() => {
+    const saved = loadProgress();
+    if (saved) {
+      setProgress(saved);
+    }
+    setIsLoaded(true);
+  }, []);
+
+  // Save progress helper
+  const updateProgress = useCallback((updates: Partial<UserProgress>) => {
+    setProgress((prev) => {
+      const newProgress = {
+        ...prev,
+        ...updates,
+        lastUpdated: new Date().toISOString(),
+      };
+      saveProgress(newProgress);
+      return newProgress;
+    });
+  }, []);
+
+  return {
+    progress,
+    isLoaded,
+    updateProgress,
+  };
+}
+```
+
+**Step 3: Update app/page.tsx**
+
+```typescript
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useProgress } from '@/hooks/useProgress';
+import { STEPS, getStepById } from '@/lib/steps-data';
 import AIPanel from '@/components/AIPanel';
 import CodeEditorPanel from '@/components/CodeEditorPanel';
 import TerminalPanel from '@/components/TerminalPanel';
-import { STEPS } from '@/lib/steps-data';
 
 export default function Home() {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [code, setCode] = useState(STEPS[0].initialCode);
+  const { progress, isLoaded, updateProgress } = useProgress();
+  const [code, setCode] = useState<string>('');
 
-  const step = STEPS[currentStep];
+  const currentStep = getStepById(progress.currentStepId);
+
+  // Initialize code from saved progress or step default
+  useEffect(() => {
+    if (isLoaded && currentStep) {
+      const savedCode = progress.codeByStep[currentStep.id];
+      setCode(savedCode || currentStep.initialCode);
+    }
+  }, [isLoaded, currentStep, progress.codeByStep]);
+
+  const handleCodeChange = (newCode: string) => {
+    setCode(newCode);
+    // Debounced save happens in the hook
+    updateProgress({
+      codeByStep: {
+        ...progress.codeByStep,
+        [progress.currentStepId]: newCode,
+      },
+    });
+  };
+
+  const handleStepChange = (newStepId: number) => {
+    updateProgress({ currentStepId: newStepId });
+  };
+
+  const handleStepComplete = (stepId: number) => {
+    if (!progress.completedSteps.includes(stepId)) {
+      updateProgress({
+        completedSteps: [...progress.completedSteps, stepId],
+      });
+    }
+  };
+
+  if (!isLoaded || !currentStep) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex flex-col">
-      {/* Progress Bar */}
-      <div className="h-2 bg-slate-200">
-        <div
-          className="h-full bg-green-600 transition-all"
-          style={{ width: `${((currentStep + 1) / STEPS.length) * 100}%` }}
-        />
-      </div>
-
-      {/* Three-panel layout */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[300px_1fr_400px]">
-        <AIPanel step={step} />
-        <CodeEditorPanel initialCode={step.initialCode} onCodeChange={setCode} />
-        <TerminalPanel
-          code={code}
-          stepId={step.id}
-          onStepComplete={() => {
-            if (currentStep < STEPS.length - 1) {
-              setCurrentStep(currentStep + 1);
-            }
-          }}
-        />
-      </div>
+    <div className="h-screen w-screen overflow-hidden flex">
+      <AIPanel step={currentStep} />
+      <CodeEditorPanel
+        step={currentStep}
+        onCodeChange={handleCodeChange}
+      />
+      <TerminalPanel
+        code={code}
+        currentStepId={currentStep.id}
+        totalSteps={STEPS.length}
+        completedSteps={new Set(progress.completedSteps)}
+        onStepChange={handleStepChange}
+        onStepComplete={handleStepComplete}
+      />
     </div>
   );
 }
+```
+
+**Step 4: Add Reset Button**
+
+In `components/TerminalPanel.tsx`, add a "Reset Progress" button:
+
+```typescript
+import { clearProgress } from '@/lib/storage';
+
+// In the component:
+const handleResetProgress = () => {
+  if (confirm('Are you sure you want to reset all progress? This cannot be undone.')) {
+    clearProgress();
+    window.location.reload();
+  }
+};
+
+// In the JSX:
+<button onClick={handleResetProgress} className="text-xs text-red-400 hover:text-red-300">
+  Reset Progress
+</button>
 ```
 
 ---
 
 ## 🎨 UI/UX Improvements Checklist
 
-- [ ] Add loading spinner during Docker execution
-- [ ] Show execution time in terminal
-- [ ] Add "Reset Code" button
+- [ ] Add debounced auto-save indicator ("Saving..." → "Saved")
+- [ ] Show loading spinner during Docker execution
+- [ ] Display execution time in terminal
+- [ ] Add "Reset Code" button (per step)
 - [ ] Implement keyboard shortcuts (Cmd+Enter to run)
 - [ ] Add dark/light mode toggle
 - [ ] Improve mobile responsiveness
 - [ ] Add tooltips for buttons
 - [ ] Show Docker status indicator
-- [ ] Add step completion checkmarks
+- [ ] Add step completion checkmarks in progress bar
 - [ ] Implement code syntax validation before execution
+- [ ] Add "Download Code" button
+- [ ] Show total time spent on project
 
 ---
 
@@ -363,37 +464,41 @@ export default function Home() {
 
 ### Performance
 
-- [ ] Container pooling (reuse containers)
+- [ ] Container pooling (reuse containers instead of creating/destroying)
 - [ ] Cache Docker image layers better
 - [ ] Optimize Monaco Editor bundle size
-- [ ] Implement code execution queue
+- [ ] Implement code execution queue (prevent multiple simultaneous runs)
+- [ ] Add service worker for offline capability
 
 ### Code Quality
 
-- [ ] Add unit tests for components
-- [ ] Add integration tests for Docker executor
-- [ ] Implement error boundaries
-- [ ] Add logging and monitoring
-- [ ] TypeScript strict mode
+- [ ] Add unit tests for React components (Jest + React Testing Library)
+- [ ] Add integration tests for API routes
+- [ ] Implement error boundaries for graceful failures
+- [ ] Add logging and monitoring (Sentry, LogRocket)
+- [ ] Enable TypeScript strict mode
+- [ ] Add Storybook for component development
 
 ### Security
 
-- [ ] Rate limiting for API endpoint
-- [ ] Input validation and sanitization
-- [ ] Container resource monitoring
+- [ ] Rate limiting for API endpoint (prevent abuse)
+- [ ] Input validation and sanitization (prevent injection attacks)
+- [ ] Container resource monitoring (alert on anomalies)
 - [ ] Audit logging for code execution
+- [ ] CSRF protection for API routes
 
 ---
 
 ## 📊 Success Metrics
 
-Track these metrics to measure MVP success:
+Track these metrics to measure success:
 
 1. **User Engagement**
 
    - Average steps completed per session
    - Time spent per step
    - Retry attempts before success
+   - Return user rate (with progress persistence)
 
 2. **Technical Performance**
 
@@ -401,40 +506,52 @@ Track these metrics to measure MVP success:
    - API response times
    - Docker container startup time
    - Error rates
+   - Page load time
 
 3. **Learning Effectiveness**
    - Step completion rate
-   - Hint usage frequency
+   - Hint usage frequency (when implemented)
    - Time to complete full project
+   - User satisfaction (future surveys)
 
 ---
 
-## 🎯 Final Recommendation: START WITH PHASE 1
+## 🎯 Recommendation: START WITH PHASE 2
 
-**Why?**
+**Why Progress Persistence?**
 
-- Provides immediate value (more content)
-- Demonstrates the full learning journey
-- Uses existing infrastructure
-- Can be tested immediately
+1. **High User Value**: Users can take breaks without losing work
+2. **Low Complexity**: Straightforward LocalStorage implementation
+3. **Foundation for Future**: Sets up state management patterns
+4. **Quick Win**: Can be completed in 1-2 days
 
 **Implementation Plan:**
 
-1. Day 1: Create steps data structure and Step 2 tests
-2. Day 2: Implement step navigation and update UI
-3. Day 3: Create Steps 3-5 and test thoroughly
+- **Day 1**: Build storage utilities and hook, update page.tsx
+- **Day 2**: Add reset functionality, test thoroughly, handle edge cases
 
-Once Phase 1 is complete, you'll have a truly functional MVP that users can complete end-to-end!
+Once Phase 2 is complete, users will have a much better experience and you'll have validated the persistence layer before adding more complex features.
 
 ---
 
 ## 📚 Additional Resources
 
+### For Phase 2 (Progress Persistence):
+- MDN LocalStorage: https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage
+- React Custom Hooks: https://react.dev/learn/reusing-logic-with-custom-hooks
+
+### For Phase 3 (Enhanced Feedback):
+- JSON in Python: https://docs.python.org/3/library/json.html
 - Redis Protocol Spec: https://redis.io/docs/reference/protocol-spec/
-- RESP (Redis Serialization Protocol): Needed for Steps 2+
+
+### For Phase 4 (Hints):
+- Progressive Disclosure UX Pattern: https://www.nngroup.com/articles/progressive-disclosure/
+
+### Future Phases:
+- ROADMAP.md - Long-term vision (Phases 2-4)
 - Docker Best Practices: Already implemented
 - Next.js Data Fetching: For future auth integration
 
 ---
 
-**Ready to implement Phase 1?** Let me know and I can help build out the multi-step system!
+**Ready to implement Phase 2?** The path forward is clear and well-documented. LocalStorage persistence is the natural next step!
